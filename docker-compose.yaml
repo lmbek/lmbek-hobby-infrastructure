@@ -3,12 +3,16 @@ version: '3.8'
 services:
   authentication-service:
     build: ../services/authentication-service
+    ports:
+      - "8081:8081"
     depends_on:
       - postgres
     networks:
       - workspace-net
   user-service:
     build: ../services/user-service
+    ports:
+      - "8082:8082"
     depends_on:
       - postgres
     networks:
