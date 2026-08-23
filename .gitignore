@@ -1,0 +1,14 @@
+# Local variable definitions containing secrets
+terraform.tfvars
+*.auto.tfvars
+
+# Local .terraform directory and crash logs
+.terraform/
+.terraform.lock.hcl
+crash.log
+crash.*.log
+
+# Terraform state files
+*.tfstate
+*.tfstate.*
+*.tfplan

@@ -28,9 +28,9 @@ data "cloudinit_config" "master_config" {
   part {
     content_type = "text/cloud-config"
     content = templatefile("${path.module}/../servers/cloud-init-master.yaml", {
-      cluster_token      = local.actual_cluster_token
-      master_private_ip  = local.master_private_ip
-      ssh_public_key     = var.ssh_public_key
+      cluster_token     = local.actual_cluster_token
+      master_private_ip = local.master_private_ip
+      ssh_public_key    = var.ssh_public_key
     })
   }
 }
@@ -42,10 +42,10 @@ data "cloudinit_config" "worker_config" {
   part {
     content_type = "text/cloud-config"
     content = templatefile("${path.module}/../servers/cloud-init-worker.yaml", {
-      cluster_token      = local.actual_cluster_token
-      master_private_ip  = local.master_private_ip
-      worker_private_ip  = local.worker_private_ip
-      ssh_public_key     = var.ssh_public_key
+      cluster_token     = local.actual_cluster_token
+      master_private_ip = local.master_private_ip
+      worker_private_ip = local.worker_private_ip
+      ssh_public_key    = var.ssh_public_key
     })
   }
 }

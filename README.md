@@ -4,6 +4,37 @@ Declarative Terraform infrastructure that provisions **2 cheap Hetzner Cloud VPS
 
 ---
 
+## 📦 Prerequisites: Installing Terraform
+
+Before running Terraform, ensure it is installed on your local machine:
+
+- **Ubuntu / Linux (Snap - Recommended)**:
+  ```bash
+  sudo snap install --classic terraform
+  ```
+  *(Note: The `--classic` flag is required by Snap for developer tool confinement).*
+
+- **Ubuntu / Debian (Official APT Repository)**:
+  ```bash
+  wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+  sudo apt update && sudo apt install terraform
+  ```
+
+- **macOS (Homebrew)**:
+  ```bash
+  brew tap hashicorp/tap
+  brew install hashicorp/tap/terraform
+  ```
+
+- **Windows**:
+  ```powershell
+  winget install HashiCorp.Terraform
+  # or: choco install terraform
+  ```
+
+---
+
 ## 🔑 Where to Put Your Hetzner API Key
 
 You have two simple options to supply your Hetzner Cloud API token:
