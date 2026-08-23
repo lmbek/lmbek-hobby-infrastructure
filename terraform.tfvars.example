@@ -18,6 +18,14 @@ hcloud_token = "YOUR_HETZNER_API_TOKEN_HERE"
 # Example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@machine"
 ssh_public_key = ""
 
+# 2.1 SSH Allowed IP Ranges (Security Hardening)
+# Restrict port 22 access exclusively to your own public IP address for maximum security.
+# Example: allowed_ssh_ips = ["203.0.113.10/32"]
+allowed_ssh_ips = [
+  "0.0.0.0/0",
+  "::/0"
+]
+
 # 3. Server Specifications (2 Cheap Hetzner Cloud VPS Servers)
 # cx23 = 2 vCPU, 4 GB RAM (~€3.79/month each)
 server_type     = "cx23"

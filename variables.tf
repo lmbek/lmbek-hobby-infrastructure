@@ -28,6 +28,15 @@ variable "ssh_public_key" {
   default     = ""
 }
 
+variable "allowed_ssh_ips" {
+  description = "List of IPv4 and IPv6 CIDR blocks permitted to connect to SSH (port 22). To maximize security, restrict to your specific IP address e.g. [\"203.0.113.10/32\"]."
+  type        = list(string)
+  default = [
+    "0.0.0.0/0",
+    "::/0"
+  ]
+}
+
 variable "ssh_key_name" {
   description = "Name identifier for the SSH key in Hetzner Cloud Console."
   type        = string

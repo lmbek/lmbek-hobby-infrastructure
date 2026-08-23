@@ -6,16 +6,13 @@
 resource "hcloud_firewall" "k3s_firewall" {
   name = "k3s-cluster-firewall"
 
-  # SSH Administration
+  # SSH Administration (Restricted or Public per var.allowed_ssh_ips)
   rule {
-    direction = "in"
-    protocol  = "tcp"
-    port      = "22"
-    source_ips = [
-      "0.0.0.0/0",
-      "::/0"
-    ]
-    description = "Allow SSH management"
+    direction   = "in"
+    protocol    = "tcp"
+    port        = "22"
+    source_ips  = var.allowed_ssh_ips
+    description = "Allow SSH management from authorized IP ranges"
   }
 
   # Public HTTP Traffic (Traefik Ingress)
