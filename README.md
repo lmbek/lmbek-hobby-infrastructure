@@ -1,6 +1,6 @@
 # Hetzner Cloud Infrastructure as Code (IaC)
 
-Declarative Terraform infrastructure that provisions **2 cheap Hetzner Cloud VPS servers** (`cx22` / ~€3.79/month each), a private network (`10.0.1.0/24`), and a cloud firewall for running a lightweight 2-node K3s Kubernetes cluster with ArgoCD GitOps.
+Declarative Terraform infrastructure that provisions **2 cheap Hetzner Cloud VPS servers** (`cx23` / ~€3.79/month each), a private network (`10.0.1.0/24`), and a cloud firewall for running a lightweight 2-node K3s Kubernetes cluster with ArgoCD GitOps.
 
 ---
 
@@ -112,11 +112,12 @@ terraform apply
 
 | URL / Host | Target Workload | Environment / Namespace | TLS Certificate |
 |---|---|---|---|
-| `https://example.com` | Web Frontend Website | `production` | Automatic Let's Encrypt Production SSL |
-| `https://staging.example.com` | Web Frontend Website | `staging` | Automatic Let's Encrypt Staging/Prod SSL |
+| `https://example.com` | Placeholder 1 Application (Frontpage) | `production` | Automatic Let's Encrypt Production SSL |
+| `https://staging.example.com` | Placeholder 1 Application (Frontpage) | `staging` | Automatic Let's Encrypt Staging/Prod SSL |
+| `https://placeholder1.example.com` | Placeholder 1 Microservice | `production` | Automatic Let's Encrypt Production SSL |
+| `https://placeholder2.example.com` | Placeholder 2 Microservice | `production` | Automatic Let's Encrypt Production SSL |
 | `https://docs.example.com` | Architecture & Tech Docs | `production` | Automatic Let's Encrypt Production SSL |
-| `https://example.com/service1` | Placeholder 1 Microservice | `production` | Automatic Let's Encrypt Production SSL |
-| `https://example.com/service2` | Placeholder 2 Microservice | `production` | Automatic Let's Encrypt Production SSL |
+| `https://web.example.com` | Web Frontend Developer Profile | `production` | Automatic Let's Encrypt Production SSL |
 
 ### Setting Up DNS A Records:
 Point your domain DNS `A` records to the output `ingress_target_ip` (which points to the Load Balancer IP if enabled, or Master Server IP):
@@ -129,27 +130,48 @@ docs.example.com.     A   <ingress_target_ip>
 
 ---
 
-## 📥 Connecting to Your Cluster
+## 📥 Connecting & Managing Your Cluster
 
 After `terraform apply` finishes, outputs provide ready-to-run commands:
 
 ```bash
-# Download kubeconfig to your local machine:
-terraform output -raw kubeconfig_command
-
-# Connect via SSH:
+# 1. SSH into the Master node:
 ssh root@<master-ip>
-ssh root@<worker-ip>
 
-# Check cluster nodes:
+# 2. Wait for background cloud-init to complete (1-2 minutes on initial boot):
+cloud-init status --wait
+
+# 3. Check cluster nodes (KUBECONFIG is set to /etc/rancher/k3s/k3s.yaml):
 kubectl get nodes -o wide
+
+# Troubleshooting: If kubectl gives "connection refused to localhost:8080", run:
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 ```
 
 ---
 
-## 🧹 Tearing Down Infrastructure
+## 🔄 Updating Server Provisioning
 
-When no longer needed, destroy all cloud resources cleanly:
+Whenever you want to modify variables (e.g. server specifications, firewall rules, domain names, or locations):
+
+1. Edit `terraform.tfvars` or `variables.tf`.
+2. Preview changes:
+   ```bash
+   terraform plan
+   ```
+3. Apply changes:
+   ```bash
+   terraform apply
+   ```
+*Terraform will automatically update resources in-place or plan node replacements if machine-level attributes are modified.*
+
+---
+
+## 🛑 Shutting Down & Destroying Infrastructure
+
+When you want to shut down servers and stop billing:
+
 ```bash
+# Permanently terminate servers, network, firewall, and load balancers:
 terraform destroy
 ```

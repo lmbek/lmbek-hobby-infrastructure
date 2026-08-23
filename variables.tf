@@ -5,9 +5,9 @@ variable "hcloud_token" {
 }
 
 variable "server_type" {
-  description = "Hetzner Cloud VPS server type (e.g. cx22 for 2 vCPU, 4GB RAM x86 at ~€3.79/mo)."
+  description = "Hetzner Cloud VPS server type (cx23 for 2 vCPU, 4GB RAM x86 at ~€3.79/mo)."
   type        = string
-  default     = "cx22"
+  default     = "cx23"
 }
 
 variable "server_location" {

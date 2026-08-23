@@ -50,13 +50,23 @@ output "ingress_target_ip" {
 }
 
 output "production_url" {
-  description = "Production website frontend URL"
+  description = "Production frontpage URL (Placeholder 1 application)"
   value       = "https://${var.domain_name}"
 }
 
 output "staging_url" {
-  description = "Staging website frontend URL"
+  description = "Staging frontpage URL (Placeholder 1 application)"
   value       = "https://staging.${var.domain_name}"
+}
+
+output "placeholder1_url" {
+  description = "Placeholder 1 application URL"
+  value       = "https://placeholder1.${var.domain_name}"
+}
+
+output "placeholder2_url" {
+  description = "Placeholder 2 application URL"
+  value       = "https://placeholder2.${var.domain_name}"
 }
 
 output "docs_url" {
@@ -64,12 +74,7 @@ output "docs_url" {
   value       = "https://docs.${var.domain_name}"
 }
 
-output "api_service1_url" {
-  description = "Placeholder 1 microservice API endpoint"
-  value       = "https://${var.domain_name}/service1"
-}
-
-output "api_service2_url" {
-  description = "Placeholder 2 microservice API endpoint"
-  value       = "https://${var.domain_name}/service2"
+output "web_frontend_url" {
+  description = "Web frontend website URL"
+  value       = "https://web.${var.domain_name}"
 }
