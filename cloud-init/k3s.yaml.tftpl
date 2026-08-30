@@ -1,0 +1,199 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - jq
+  - unattended-upgrades
+  - ufw
+
+users:
+  - default
+  - name: ${admin_username}
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+  - name: github-runner
+    shell: /bin/bash
+    system: true
+    create_home: true
+
+write_files:
+  - path: /etc/ssh/sshd_config.d/99-hardened.conf
+    permissions: '0600'
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+      X11Forwarding no
+      AllowAgentForwarding no
+      MaxAuthTries 3
+      AllowUsers ${admin_username}
+  - path: /etc/apt/apt.conf.d/20auto-upgrades
+    permissions: '0644'
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+  - path: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+    permissions: '0600'
+    content: |
+      apiVersion: helm.cattle.io/v1
+      kind: HelmChartConfig
+      metadata:
+        name: traefik
+        namespace: kube-system
+      spec:
+        valuesContent: |-
+          deployment:
+            replicas: 1
+          persistence:
+            enabled: true
+            name: data
+            accessMode: ReadWriteOnce
+            size: 128Mi
+            path: /data
+          additionalArguments:
+            - "--certificatesresolvers.letsencrypt.acme.email=${letsencrypt_email}"
+            - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+            - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+          ports:
+            web:
+              redirections:
+                entryPoint:
+                  to: websecure
+                  scheme: https
+                  permanent: true
+  - path: /usr/local/sbin/bootstrap-deployer.sh
+    permissions: '0700'
+    content: |
+      #!/bin/sh
+      set -eu
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      kubectl wait --for=condition=Ready node --all --timeout=180s
+      kubectl apply -f - <<'MANIFEST'
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: production
+        labels:
+          pod-security.kubernetes.io/enforce: restricted
+          pod-security.kubernetes.io/audit: restricted
+          pod-security.kubernetes.io/warn: restricted
+      ---
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: github-deployer
+        namespace: production
+      ---
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: github-deployer-token
+        namespace: production
+        annotations:
+          kubernetes.io/service-account.name: github-deployer
+      type: kubernetes.io/service-account-token
+      ---
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: Role
+      metadata:
+        name: github-deployer
+        namespace: production
+      rules:
+        - apiGroups: ["", "apps", "networking.k8s.io", "traefik.io"]
+          resources: ["configmaps", "services", "limitranges", "deployments", "replicasets", "networkpolicies", "ingresses", "middlewares"]
+          verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+        - apiGroups: [""]
+          resources: ["pods"]
+          verbs: ["get", "list", "watch"]
+      ---
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: github-deployer
+        namespace: production
+      subjects:
+        - kind: ServiceAccount
+          name: github-deployer
+          namespace: production
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: Role
+        name: github-deployer
+      MANIFEST
+
+      token=""
+      while [ -z "$token" ]; do
+        token=$(kubectl -n production get secret github-deployer-token -o jsonpath='{.data.token}' | base64 -d)
+        [ -n "$token" ] || sleep 2
+      done
+      ca=$(kubectl -n production get secret github-deployer-token -o jsonpath='{.data.ca\.crt}')
+      install -d -o github-runner -g github-runner -m 0700 /home/github-runner/.kube
+      cat > /home/github-runner/.kube/config <<EOF
+      apiVersion: v1
+      kind: Config
+      clusters:
+        - name: k3s
+          cluster:
+            certificate-authority-data: $ca
+            server: https://127.0.0.1:6443
+      contexts:
+        - name: production
+          context:
+            cluster: k3s
+            namespace: production
+            user: github-deployer
+      current-context: production
+      users:
+        - name: github-deployer
+          user:
+            token: $token
+      EOF
+      chown github-runner:github-runner /home/github-runner/.kube/config
+      chmod 0600 /home/github-runner/.kube/config
+
+  - path: /usr/local/sbin/install-github-runner.sh
+    permissions: '0700'
+    content: |
+      #!/bin/sh
+      set -eu
+      version='${github_runner_version}'
+      archive="actions-runner-linux-x64-$version.tar.gz"
+      install -d -o github-runner -g github-runner /opt/actions-runner
+      curl --fail --location --retry 5 -o "/tmp/$archive" \
+        "https://github.com/actions/runner/releases/download/v$version/$archive"
+      echo '${github_runner_sha256}  /tmp/'"$archive" | sha256sum --check -
+      tar -xzf "/tmp/$archive" -C /opt/actions-runner
+      chown -R github-runner:github-runner /opt/actions-runner
+      runuser -u github-runner -- /opt/actions-runner/config.sh \
+        --unattended --replace \
+        --url '${github_repository_url}' \
+        --token '${github_runner_token}' \
+        --name '${server_name}' \
+        --labels 'k3s-production'
+      /opt/actions-runner/svc.sh install github-runner
+      /opt/actions-runner/svc.sh start
+      rm -f "/tmp/$archive"
+
+runcmd:
+  - systemctl restart ssh
+  - ufw default deny incoming
+  - ufw default allow outgoing
+${allowed_ssh_commands}
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow from 10.42.0.0/16
+  - ufw allow from 10.43.0.0/16
+  - ufw --force enable
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${k3s_version}' INSTALL_K3S_EXEC='server --write-kubeconfig-mode 600 --secrets-encryption' sh -
+  - /usr/local/sbin/bootstrap-deployer.sh
+  - /usr/local/sbin/install-github-runner.sh
+  - systemctl enable --now unattended-upgrades
+
+final_message: "K3s, Traefik ACME, and the least-privilege GitHub deployment runner are ready for ${domain}."
