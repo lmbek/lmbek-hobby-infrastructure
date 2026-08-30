@@ -7,12 +7,13 @@ K3s, cert-manager, and Argo CD; Argo CD continuously reconciles the platform rep
 
 ```bash
 cp terraform.tfvars.example terraform.tfvars
-# Fill in the token, SSH key, and allowed SSH CIDRs.
+# Fill in the token, SSH key, and allowed SSH CIDRs. Keep terraform.tfvars local.
 
 terraform init
 terraform fmt -check
 terraform validate
 terraform plan
+# Review the plan carefully, especially any server replacement.
 terraform apply
 ```
 
@@ -21,16 +22,21 @@ the platform manifests in Git and apply from your local environment.
 
 ## DNS and TLS
 
-Point these DNS `A` records to `terraform output -raw ingress_target_ip`:
+After apply, get the server address:
+
+```bash
+terraform output -raw ingress_target_ip
+```
+
+Create exactly these DNS records at your provider:
 
 ```text
 @            A  <ingress_target_ip>
-*            A  <ingress_target_ip>
-*.staging    A  <ingress_target_ip>
 ```
 
-cert-manager obtains trusted Let's Encrypt certificates for production and staging.
-DNS must resolve publicly and ports `80` and `443` must remain open.
+Only the frontend is public. Do not add wildcard records. cert-manager obtains trusted
+Let's Encrypt certificates for `lmbek.dk` and `staging.lmbek.dk`; DNS must resolve
+publicly and ports `80` and `443` must remain open.
 
 Verify from your local machine after DNS propagation:
 
@@ -39,6 +45,23 @@ terraform output
 curl --fail --show-error --head https://lmbek.dk
 curl --fail --show-error --head https://staging.lmbek.dk
 ```
+
+The first certificate can take several minutes. Inspect the certificate from your
+machine with `curl -Iv https://lmbek.dk`; never SSH to inspect production.
+
+## Change workflow
+
+1. Change Terraform, cloud-init, or Kubernetes YAML in its own repository.
+2. Open a pull request and wait for its validation workflow to pass.
+3. Merge the pull request to `main`.
+4. For Terraform changes, run `terraform plan` and apply it locally only after review.
+5. For platform changes, Argo CD automatically reconciles `main`; no manual `kubectl`
+   or server command is needed.
+
+Service image changes follow the service repository's GitHub Actions workflow. It runs
+tests and publishes an image to GHCR. Record the resulting immutable digest in the
+staging overlay, merge it, test `https://staging.lmbek.dk`, then copy the same digest
+to the production overlay and merge that change for the release.
 
 ## Important migration note
 
