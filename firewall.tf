@@ -1,21 +1,14 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# Hetzner Cloud Firewall Configuration
-# Restricts public access to SSH, HTTP, HTTPS and secures internal traffic.
-# ─────────────────────────────────────────────────────────────────────────────
-
 resource "hcloud_firewall" "k3s_firewall" {
-  name = "k3s-cluster-firewall"
+  name = "lmbek-k3s"
 
-  # SSH Administration (Restricted or Public per var.allowed_ssh_ips)
   rule {
     direction   = "in"
     protocol    = "tcp"
     port        = "22"
     source_ips  = var.allowed_ssh_ips
-    description = "Allow SSH management from authorized IP ranges"
+    description = "Emergency SSH access"
   }
 
-  # Public HTTP Traffic (Traefik Ingress)
   rule {
     direction = "in"
     protocol  = "tcp"
@@ -24,10 +17,9 @@ resource "hcloud_firewall" "k3s_firewall" {
       "0.0.0.0/0",
       "::/0"
     ]
-    description = "Allow HTTP public web traffic"
+    description = "HTTP and ACME challenges"
   }
 
-  # Public HTTPS Traffic (Traefik Ingress)
   rule {
     direction = "in"
     protocol  = "tcp"
@@ -36,39 +28,6 @@ resource "hcloud_firewall" "k3s_firewall" {
       "0.0.0.0/0",
       "::/0"
     ]
-    description = "Allow HTTPS secure public web traffic"
-  }
-
-  # Allow the K3s API from the private subnet.
-  rule {
-    direction = "in"
-    protocol  = "tcp"
-    port      = "6443"
-    source_ips = [
-      "10.0.1.0/24"
-    ]
-    description = "Allow the internal K3s API"
-  }
-
-  # Allow kubelet metrics and exec/log traffic from the private subnet.
-  rule {
-    direction = "in"
-    protocol  = "tcp"
-    port      = "10250"
-    source_ips = [
-      "10.0.1.0/24"
-    ]
-    description = "Allow internal kubelet traffic"
-  }
-
-  # Allow Flannel VXLAN encapsulation between nodes.
-  rule {
-    direction = "in"
-    protocol  = "udp"
-    port      = "8472"
-    source_ips = [
-      "10.0.1.0/24"
-    ]
-    description = "Allow internal Flannel VXLAN traffic"
+    description = "HTTPS"
   }
 }

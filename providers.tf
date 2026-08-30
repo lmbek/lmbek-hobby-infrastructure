@@ -6,22 +6,6 @@ terraform {
       source  = "hetznercloud/hcloud"
       version = "~> 1.45.0"
     }
-    cloudinit = {
-      source  = "hashicorp/cloudinit"
-      version = "~> 2.3.5"
-    }
-    tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.0.5"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5.1"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6.0"
-    }
   }
 }
 
