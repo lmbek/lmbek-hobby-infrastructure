@@ -37,8 +37,8 @@ admin_username    = "k3sadmin"
 domain            = "lmbek.dk"
 letsencrypt_email = "admin@example.com"
 
-# Generate immediately before terraform apply:
-# gh api --method POST repos/lmbek/lmbek-hobby-platform/actions/runners/registration-token --jq .token
+# Generate and write immediately before terraform apply from the workspace root:
+# make github-runner-token
 # This token is single-use and expires after one hour; it is not a long-lived deployment credential.
 github_runner_token  = "ONE_TIME_RUNNER_REGISTRATION_TOKEN"
 github_repository_url = "https://github.com/lmbek/lmbek-hobby-platform"
