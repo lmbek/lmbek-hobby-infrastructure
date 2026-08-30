@@ -31,6 +31,7 @@ data "cloudinit_config" "master_config" {
       cluster_token     = local.actual_cluster_token
       master_private_ip = local.master_private_ip
       ssh_public_key    = var.ssh_public_key
+      acme_email        = var.acme_email
     })
   }
 }

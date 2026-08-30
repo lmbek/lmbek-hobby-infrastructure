@@ -34,8 +34,8 @@ server_image    = "ubuntu-24.04"
 
 # 4. Domain & TLS Certificate Management (Let's Encrypt)
 # Set your domain to automatically issue SSL certificates and configure Ingress URLs:
-domain_name = "example.com"
-acme_email  = "admin@example.com"
+domain_name = "lmbek.dk"
+acme_email  = "admin@lmbek.dk"
 
 # 5. Hetzner Cloud Load Balancer (Optional, default = false)
 # When set to true, provisions a Hetzner Load Balancer (lb11) in front of the master/worker nodes

@@ -102,7 +102,7 @@ terraform apply
 
 1. **`k3s-master` (`10.0.1.10`)**: Server 1 running K3s server, Traefik Ingress, cert-manager, and ArgoCD controller.
 2. **`k3s-worker` (`10.0.1.11`)**: Server 2 automatically joining the cluster over the private network.
-3. **Private Network (`10.0.1.0/24`)**: Fast and secure inter-node communication. The K3s Kubernetes API (port 6443) is bound strictly to the private network and never exposed to the public internet.
+3. **Private Network (`10.0.1.0/24`)**: Fast and secure inter-node communication. The K3s Kubernetes API (port 6443) is bound strictly to the private network and never exposed to the public internet. Cloud-init also installs cert-manager, Argo CD, and the platform applications after K3s is ready.
 4. **Cloud Firewall**: Allows SSH (22), HTTP (80), HTTPS (443), and isolates internal cluster communication.
 5. **Optional Hetzner Load Balancer (`lb11`)**: High-availability edge proxy routing HTTP (80) and HTTPS (443) traffic across master and worker nodes.
 
@@ -112,20 +112,19 @@ terraform apply
 
 | URL / Host | Target Workload | Environment / Namespace | TLS Certificate |
 |---|---|---|---|
-| `https://example.com` | Placeholder 1 Application (Frontpage) | `production` | Automatic Let's Encrypt Production SSL |
-| `https://staging.example.com` | Placeholder 1 Application (Frontpage) | `staging` | Automatic Let's Encrypt Staging/Prod SSL |
-| `https://placeholder1.example.com` | Placeholder 1 Microservice | `production` | Automatic Let's Encrypt Production SSL |
-| `https://placeholder2.example.com` | Placeholder 2 Microservice | `production` | Automatic Let's Encrypt Production SSL |
-| `https://docs.example.com` | Architecture & Tech Docs | `production` | Automatic Let's Encrypt Production SSL |
-| `https://web.example.com` | Web Frontend Developer Profile | `production` | Automatic Let's Encrypt Production SSL |
+| `https://lmbek.dk` | Web frontend | `production` | Let's Encrypt production |
+| `https://staging.lmbek.dk` | Web frontend | `staging` | Let's Encrypt staging (browser-untrusted test certificate) |
+| `https://placeholder1.lmbek.dk` | Placeholder 1 microservice | `production` | Let's Encrypt production |
+| `https://placeholder2.lmbek.dk` | Placeholder 2 microservice | `production` | Let's Encrypt production |
+| `https://docs.lmbek.dk` | Architecture and technical docs | `production` | Let's Encrypt production |
+| `https://web.lmbek.dk` | Web frontend | `production` | Let's Encrypt production |
 
 ### Setting Up DNS A Records:
 Point your domain DNS `A` records to the output `ingress_target_ip` (which points to the Load Balancer IP if enabled, or Master Server IP):
 ```dns
-example.com.          A   <ingress_target_ip>
-*.example.com.        A   <ingress_target_ip>
-staging.example.com.  A   <ingress_target_ip>
-docs.example.com.     A   <ingress_target_ip>
+lmbek.dk.              A   <ingress_target_ip>
+*.lmbek.dk.            A   <ingress_target_ip>
+*.staging.lmbek.dk.    A   <ingress_target_ip>
 ```
 
 ---
@@ -141,8 +140,14 @@ ssh root@<master-ip>
 # 2. Wait for background cloud-init to complete (1-2 minutes on initial boot):
 cloud-init status --wait
 
+# If cloud-init reports an error, inspect the bootstrap before retrying anything:
+cloud-init status --long
+journalctl -u cloud-final --no-pager
+
 # 3. Check cluster nodes (KUBECONFIG is set to /etc/rancher/k3s/k3s.yaml):
 kubectl get nodes -o wide
+kubectl get applications -n argocd
+kubectl get certificates,ingress -A
 
 # Troubleshooting: If kubectl gives "connection refused to localhost:8080", run:
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
