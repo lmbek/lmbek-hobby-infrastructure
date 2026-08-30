@@ -50,12 +50,12 @@ output "ingress_target_ip" {
 }
 
 output "production_url" {
-  description = "Production frontpage URL (Placeholder 1 application)"
+  description = "Production web frontend URL"
   value       = "https://${var.domain_name}"
 }
 
 output "staging_url" {
-  description = "Staging frontpage URL (Placeholder 1 application)"
+  description = "Staging web frontend URL"
   value       = "https://staging.${var.domain_name}"
 }
 

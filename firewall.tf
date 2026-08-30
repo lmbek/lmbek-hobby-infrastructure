@@ -39,25 +39,36 @@ resource "hcloud_firewall" "k3s_firewall" {
     description = "Allow HTTPS secure public web traffic"
   }
 
-  # Allow all intra-cluster TCP traffic on private subnet (including internal K3s API 6443)
+  # Allow the K3s API from the private subnet.
   rule {
     direction = "in"
     protocol  = "tcp"
-    port      = "1-65535"
+    port      = "6443"
     source_ips = [
-      "10.0.0.0/16"
+      "10.0.1.0/24"
     ]
-    description = "Allow all internal TCP across private network (K3s API, Flannel, kubelet)"
+    description = "Allow the internal K3s API"
   }
 
-  # Allow all intra-cluster UDP traffic (Flannel VXLAN / WireGuard)
+  # Allow kubelet metrics and exec/log traffic from the private subnet.
+  rule {
+    direction = "in"
+    protocol  = "tcp"
+    port      = "10250"
+    source_ips = [
+      "10.0.1.0/24"
+    ]
+    description = "Allow internal kubelet traffic"
+  }
+
+  # Allow Flannel VXLAN encapsulation between nodes.
   rule {
     direction = "in"
     protocol  = "udp"
-    port      = "1-65535"
+    port      = "8472"
     source_ips = [
-      "10.0.0.0/16"
+      "10.0.1.0/24"
     ]
-    description = "Allow all internal UDP pod network traffic"
+    description = "Allow internal Flannel VXLAN traffic"
   }
 }

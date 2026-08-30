@@ -57,15 +57,15 @@ variable "environment" {
 }
 
 variable "domain_name" {
-  description = "Primary domain name for ingress routing and certificate generation (e.g. example.com or lmbek.local)."
+  description = "Primary domain name for ingress routing and certificate generation."
   type        = string
-  default     = "lmbek.local"
+  default     = "lmbek.dk"
 }
 
 variable "acme_email" {
   description = "Contact email address for Let's Encrypt TLS certificate expiration notices."
   type        = string
-  default     = "admin@lmbek.local"
+  default     = "admin@lmbek.dk"
 }
 
 variable "enable_load_balancer" {

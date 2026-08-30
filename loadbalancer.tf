@@ -30,7 +30,10 @@ resource "hcloud_load_balancer_target" "target_master" {
   load_balancer_id = hcloud_load_balancer.cluster_lb[0].id
   server_id        = hcloud_server.k3s_master.id
   use_private_ip   = true
-  depends_on       = [hcloud_load_balancer_network.lb_private_net]
+  depends_on = [
+    hcloud_load_balancer_network.lb_private_net,
+    hcloud_server_network.master_network,
+  ]
 }
 
 resource "hcloud_load_balancer_target" "target_worker" {
@@ -39,24 +42,32 @@ resource "hcloud_load_balancer_target" "target_worker" {
   load_balancer_id = hcloud_load_balancer.cluster_lb[0].id
   server_id        = hcloud_server.k3s_worker.id
   use_private_ip   = true
-  depends_on       = [hcloud_load_balancer_network.lb_private_net]
+  depends_on = [
+    hcloud_load_balancer_network.lb_private_net,
+    hcloud_server_network.worker_network,
+  ]
 }
 
 # Service 1: HTTP (Port 80) Forwarding with Health Checks
 resource "hcloud_load_balancer_service" "http" {
   count            = var.enable_load_balancer ? 1 : 0
   load_balancer_id = hcloud_load_balancer.cluster_lb[0].id
-  protocol         = "tcp"
+  protocol         = "http"
   listen_port      = 80
   destination_port = 80
   proxyprotocol    = false
 
   health_check {
-    protocol = "tcp"
+    protocol = "http"
     port     = 80
     interval = 10
     timeout  = 3
     retries  = 3
+
+    http {
+      path         = "/ping"
+      status_codes = ["2??", "3??", "404"]
+    }
   }
 }
 
@@ -70,10 +81,15 @@ resource "hcloud_load_balancer_service" "https" {
   proxyprotocol    = false
 
   health_check {
-    protocol = "tcp"
-    port     = 443
+    protocol = "http"
+    port     = 80
     interval = 10
     timeout  = 3
     retries  = 3
+
+    http {
+      path         = "/ping"
+      status_codes = ["2??", "3??", "404"]
+    }
   }
 }
