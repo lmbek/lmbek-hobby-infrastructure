@@ -58,10 +58,11 @@ machine with `curl -Iv https://lmbek.dk`; never SSH to inspect production.
 5. For platform changes, Argo CD automatically reconciles `main`; no manual `kubectl`
    or server command is needed.
 
-Service image changes follow the service repository's GitHub Actions workflow. It runs
-tests and publishes an image to GHCR. Record the resulting immutable digest in the
-staging overlay, merge it, test `https://staging.lmbek.dk`, then copy the same digest
-to the production overlay and merge that change for the release.
+Service image changes are automated after a one-time `PLATFORM_REPOSITORY_TOKEN`
+secret is configured in each service repository and the platform repository. GitHub
+Actions publishes the tested image, updates and merges staging, waits for the public
+staging health endpoint, and promotes the exact immutable digest to production. It
+does not access Terraform, SSH, Kubernetes credentials, or production servers.
 
 ## Important migration note
 
