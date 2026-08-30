@@ -22,12 +22,23 @@ ssh_public_key = ""
 # Restrict port 22 access exclusively to your own public IP address for maximum security.
 # Example: allowed_ssh_ips = ["203.0.113.10/32"]
 allowed_ssh_ips = [
-  "0.0.0.0/0",
-  "::/0"
+  "203.0.113.10/32"
 ]
 
 # 3. Server Specifications (one Hetzner Cloud VPS)
 # cx23 = 2 vCPU, 4 GB RAM
-server_type     = "cx23"
-server_location = "fsn1"          # Falkenstein (Germany). Options: fsn1, nbg1, hel1, ash, hil
-server_image    = "ubuntu-24.04"
+server_size   = "cx23"
+server_region = "fsn1"          # Falkenstein (Germany). Options: fsn1, nbg1, hel1, ash, hil
+server_image  = "ubuntu-24.04"
+
+# 4. Platform settings
+server_name       = "lmbek-k3s"
+admin_username    = "k3sadmin"
+domain            = "lmbek.dk"
+letsencrypt_email = "admin@example.com"
+
+# Generate immediately before terraform apply:
+# gh api --method POST repos/lmbek/lmbek-hobby-platform/actions/runners/registration-token --jq .token
+# This token is single-use and expires after one hour; it is not a long-lived deployment credential.
+github_runner_token  = "ONE_TIME_RUNNER_REGISTRATION_TOKEN"
+github_repository_url = "https://github.com/lmbek/lmbek-hobby-platform"

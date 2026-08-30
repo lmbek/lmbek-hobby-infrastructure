@@ -1,5 +1,5 @@
 resource "hcloud_firewall" "k3s_firewall" {
-  name = "lmbek-k3s"
+  name = var.server_name
 
   rule {
     direction   = "in"

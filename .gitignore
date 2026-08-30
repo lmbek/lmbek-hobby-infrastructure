@@ -4,7 +4,6 @@ terraform.tfvars
 
 # Local .terraform directory and crash logs
 .terraform/
-.terraform.lock.hcl
 crash.log
 crash.*.log
 
