@@ -1,182 +1,50 @@
-# Hetzner Cloud Infrastructure as Code (IaC)
+# Hetzner infrastructure
 
-Declarative Terraform infrastructure that provisions **2 cheap Hetzner Cloud VPS servers** (`cx23` / ~€3.79/month each), a private network (`10.0.1.0/24`), and a cloud firewall for running a lightweight 2-node K3s Kubernetes cluster with ArgoCD GitOps.
+This Terraform stack creates one Hetzner server and one firewall. Cloud-init installs
+K3s, cert-manager, and Argo CD; Argo CD continuously reconciles the platform repository.
 
----
-
-## 📦 Prerequisites: Installing Terraform
-
-Before running Terraform, ensure it is installed on your local machine:
-
-- **Ubuntu / Linux (Snap - Recommended)**:
-  ```bash
-  sudo snap install --classic terraform
-  ```
-  *(Note: The `--classic` flag is required by Snap for developer tool confinement).*
-
-- **Ubuntu / Debian (Official APT Repository)**:
-  ```bash
-  wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-  echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-  sudo apt update && sudo apt install terraform
-  ```
-
-- **macOS (Homebrew)**:
-  ```bash
-  brew tap hashicorp/tap
-  brew install hashicorp/tap/terraform
-  ```
-
-- **Windows**:
-  ```powershell
-  winget install HashiCorp.Terraform
-  # or: choco install terraform
-  ```
-
----
-
-## 🔑 Where to Put Your Hetzner API Key
-
-You have two simple options to supply your Hetzner Cloud API token:
-
-### Option A: `terraform.tfvars` (Recommended & Simple)
-1. In this directory (`git-repositories/infrastructure/iac`), copy the example variables file:
-   ```bash
-   cp terraform.tfvars.example terraform.tfvars
-   ```
-2. Open `terraform.tfvars` and paste your token:
-   ```hcl
-   hcloud_token = "your-hetzner-api-token-here"
-   ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI..." # Optional
-   ```
-> **Security Note:** `terraform.tfvars` is listed in `.gitignore`. Your API token will **never** be committed to Git.
-
-### Option B: Environment Variable
-Alternatively, export the token directly in your terminal:
-```bash
-export HCLOUD_TOKEN="your-hetzner-api-token-here"
-```
-
----
-
-## 🚀 One-Time Server Setup (2 Minutes)
-
-Run Terraform from `git-repositories/infrastructure/iac`:
+## Apply from your local machine
 
 ```bash
-# 1. Initialize Terraform and download providers
+cp terraform.tfvars.example terraform.tfvars
+# Fill in the token, SSH key, and allowed SSH CIDRs.
+
 terraform init
-
-# 2. Preview the infrastructure plan
+terraform fmt -check
+terraform validate
 terraform plan
-
-# 3. Provision the 2 servers, private network, and firewall
 terraform apply
 ```
 
----
+Never make manual changes on the production server. Change Terraform, cloud-init, or
+the platform manifests in Git and apply from your local environment.
 
-## 🏗️ What Gets Provisioned
+## DNS and TLS
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                 Hetzner Cloud Project                       │
-│                                                             │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │        Cloud Firewall: Ports 22, 80, 443            │   │
-│   └──────────────────────────┬──────────────────────────┘   │
-│                              │                              │
-│   ┌──────────────────────────┴──────────────────────────┐   │
-│   │        Private Cloud Network: 10.0.1.0/24           │   │
-│   │                                                     │   │
-│   │   ┌──────────────────────┐  ┌───────────────────┐   │   │
-│   │   │ Server 1: k3s-master │  │ Server 2: worker  │   │   │
-│   │   │ (Private: 10.0.1.10) │  │ (Priv: 10.0.1.11) │   │   │
-│   │   │ - K3s Control Plane  │  │ - Workload Pods   │   │   │
-│   │   │ - Traefik Ingress    │  │                   │   │   │
-│   │   │ - ArgoCD GitOps      │  │                   │   │   │
-│   │   └──────────────────────┘  └───────────────────┘   │   │
-│   └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+Point these DNS `A` records to `terraform output -raw ingress_target_ip`:
+
+```text
+@            A  <ingress_target_ip>
+*            A  <ingress_target_ip>
+*.staging    A  <ingress_target_ip>
 ```
 
-1. **`k3s-master` (`10.0.1.10`)**: Server 1 running K3s server, Traefik Ingress, cert-manager, and ArgoCD controller.
-2. **`k3s-worker` (`10.0.1.11`)**: Server 2 automatically joining the cluster over the private network.
-3. **Private Network (`10.0.1.0/24`)**: Fast and secure inter-node communication. The K3s Kubernetes API (port 6443) is bound strictly to the private network and never exposed to the public internet. Cloud-init also installs cert-manager, Argo CD, and the platform applications after K3s is ready.
-4. **Cloud Firewall**: Allows SSH (22), HTTP (80), HTTPS (443), and isolates internal cluster communication.
-5. **Optional Hetzner Load Balancer (`lb11`)**: High-availability edge proxy routing HTTP (80) and HTTPS (443) traffic across master and worker nodes.
+cert-manager obtains trusted Let's Encrypt certificates for production and staging.
+DNS must resolve publicly and ports `80` and `443` must remain open.
 
----
-
-## 🌐 Load Balancers, Proxies & Best Practice URLs
-
-| URL / Host | Target Workload | Environment / Namespace | TLS Certificate |
-|---|---|---|---|
-| `https://lmbek.dk` | Web frontend | `production` | Let's Encrypt production |
-| `https://staging.lmbek.dk` | Web frontend | `staging` | Let's Encrypt staging (browser-untrusted test certificate) |
-| `https://placeholder1.lmbek.dk` | Placeholder 1 microservice | `production` | Let's Encrypt production |
-| `https://placeholder2.lmbek.dk` | Placeholder 2 microservice | `production` | Let's Encrypt production |
-| `https://docs.lmbek.dk` | Architecture and technical docs | `production` | Let's Encrypt production |
-| `https://web.lmbek.dk` | Web frontend | `production` | Let's Encrypt production |
-
-### Setting Up DNS A Records:
-Point your domain DNS `A` records to the output `ingress_target_ip` (which points to the Load Balancer IP if enabled, or Master Server IP):
-```dns
-lmbek.dk.              A   <ingress_target_ip>
-*.lmbek.dk.            A   <ingress_target_ip>
-*.staging.lmbek.dk.    A   <ingress_target_ip>
-```
-
----
-
-## 📥 Connecting & Managing Your Cluster
-
-After `terraform apply` finishes, outputs provide ready-to-run commands:
+Verify from your local machine after DNS propagation:
 
 ```bash
-# 1. SSH into the Master node:
-ssh root@<master-ip>
-
-# 2. Wait for background cloud-init to complete (1-2 minutes on initial boot):
-cloud-init status --wait
-
-# If cloud-init reports an error, inspect the bootstrap before retrying anything:
-cloud-init status --long
-journalctl -u cloud-final --no-pager
-
-# 3. Check cluster nodes (KUBECONFIG is set to /etc/rancher/k3s/k3s.yaml):
-kubectl get nodes -o wide
-kubectl get applications -n argocd
-kubectl get certificates,ingress -A
-
-# Troubleshooting: If kubectl gives "connection refused to localhost:8080", run:
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+terraform output
+curl --fail --show-error --head https://lmbek.dk
+curl --fail --show-error --head https://staging.lmbek.dk
 ```
 
----
+## Important migration note
 
-## 🔄 Updating Server Provisioning
+The simplification from two nodes to one removes the worker, private network, and
+optional load balancer resources. The changed immutable cloud-init also replaces the
+existing K3s server. Review the plan and apply only when replacement is intended; then
+update DNS if `ingress_target_ip` changes.
 
-Whenever you want to modify variables (e.g. server specifications, firewall rules, domain names, or locations):
-
-1. Edit `terraform.tfvars` or `variables.tf`.
-2. Preview changes:
-   ```bash
-   terraform plan
-   ```
-3. Apply changes:
-   ```bash
-   terraform apply
-   ```
-*Terraform will automatically update resources in-place or plan node replacements if machine-level attributes are modified.*
-
----
-
-## 🛑 Shutting Down & Destroying Infrastructure
-
-When you want to shut down servers and stop billing:
-
-```bash
-# Permanently terminate servers, network, firewall, and load balancers:
-terraform destroy
-```
+Destroy all cloud resources with `terraform destroy`.

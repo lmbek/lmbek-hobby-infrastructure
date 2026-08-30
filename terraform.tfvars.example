@@ -14,7 +14,7 @@
 # Generate from: https://console.hetzner.cloud -> Project -> Security -> API Tokens (Read & Write)
 hcloud_token = "YOUR_HETZNER_API_TOKEN_HERE"
 
-# 2. Your SSH Public Key (Optional but highly recommended for direct SSH access)
+# 2. Your SSH Public Key (required for emergency access)
 # Example: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@machine"
 ssh_public_key = ""
 
@@ -26,22 +26,8 @@ allowed_ssh_ips = [
   "::/0"
 ]
 
-# 3. Server Specifications (2 Cheap Hetzner Cloud VPS Servers)
-# cx23 = 2 vCPU, 4 GB RAM (~€3.79/month each)
+# 3. Server Specifications (one Hetzner Cloud VPS)
+# cx23 = 2 vCPU, 4 GB RAM
 server_type     = "cx23"
 server_location = "fsn1"          # Falkenstein (Germany). Options: fsn1, nbg1, hel1, ash, hil
 server_image    = "ubuntu-24.04"
-
-# 4. Domain & TLS Certificate Management (Let's Encrypt)
-# Set your domain to automatically issue SSL certificates and configure Ingress URLs:
-domain_name = "lmbek.dk"
-acme_email  = "admin@lmbek.dk"
-
-# 5. Hetzner Cloud Load Balancer (Optional, default = false)
-# When set to true, provisions a Hetzner Load Balancer (lb11) in front of the master/worker nodes
-enable_load_balancer = false
-load_balancer_type   = "lb11"
-
-# 6. Optional Custom Cluster Token
-# If empty, Terraform generates a secure 32-character random token automatically.
-# k3s_cluster_token = ""
